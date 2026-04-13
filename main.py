@@ -1,5 +1,6 @@
 import sys
 import os
+# Asegura que el directorio actual esté en el path para imports locales
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from factories.PedidoFactory import PedidoFactory
@@ -7,9 +8,9 @@ from factories.RepartidorFactory import RepartidorFactory
 from decorators.PedidoDecorator import PedidoPrioritario
 from facades.LogisticaFacade import LogisticaFacade
 
-# Ejemplo de uso
+# Ejemplo de uso: flujo mínimo que crea, valida y asigna un pedido
 if __name__ == "__main__":
-    # Crear una fachada para gestionar la logística
+    # Crear una fachada para gestionar la logística. La fachada orquesta fábricas y asignaciones.
     facade = LogisticaFacade(PedidoFactory, RepartidorFactory)
 
     # Datos de ejemplo para un pedido y un repartidor
@@ -31,4 +32,5 @@ if __name__ == "__main__":
     # Crear y asignar un pedido (la fachada valida y asigna)
     pedido = facade.crear_y_asignar_pedido(pedido_data, repartidor_data)
 
+    # Mostrar resultado: estado y repartidor asignado
     print(f"Pedido {pedido.id} estado: {pedido.estado}, repartidor: {pedido.repartidor_asignado}")
