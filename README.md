@@ -1,6 +1,6 @@
 # Proyecto Logística (arquitectura y patrones)
 
-Estructura organizada por patrones de diseño para la entrega del ramo.
+Estructura organizada por patrones de diseño para entrega 1.
 
 Estructura principal:
 
