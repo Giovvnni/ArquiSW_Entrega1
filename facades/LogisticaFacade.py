@@ -1,7 +1,13 @@
-# LogisticaFacade
+"""Fachada para coordinar acciones entre subsistemas.
+
+Depende de abstracciones de fábricas (DIP).
+"""
+
+from interfaces import IPedidoFactory, IRepartidorFactory
+
 
 class LogisticaFacade:
-    def __init__(self, pedido_factory, repartidor_factory):
+    def __init__(self, pedido_factory: IPedidoFactory, repartidor_factory: IRepartidorFactory):
         self.pedido_factory = pedido_factory
         self.repartidor_factory = repartidor_factory
 

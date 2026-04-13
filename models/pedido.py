@@ -1,4 +1,7 @@
-class Pedido:
+from interfaces import IPedido
+
+
+class Pedido(IPedido):
     ESTADOS = (
         "Creado",
         "Validado",

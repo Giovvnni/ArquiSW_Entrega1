@@ -1,7 +1,8 @@
 from .pedido import Pedido
+from interfaces import IRepartidor
 
 
-class Repartidor:
+class Repartidor(IRepartidor):
     def __init__(self, id, capacidad):
         self.id = id
         self.capacidad = capacidad
