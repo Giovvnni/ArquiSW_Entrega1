@@ -30,6 +30,19 @@ class Pedido(IPedido):
         self.estado = "Creado"
         self.repartidor_asignado = None
 
+        # Definición explícita de transiciones permitidas (máquina de estados)
+        self._transiciones = {
+            "Creado": ("Validado", "Cancelado"),
+            "Validado": ("Pendiente de asignación", "Asignado", "Cancelado"),
+            "Pendiente de asignación": ("Asignado", "Cancelado"),
+            "Asignado": ("En ruta", "Reprogramado", "Cancelado"),
+            "En ruta": ("Entregado", "Intento fallido", "Cancelado"),
+            "Intento fallido": ("Reprogramado", "En ruta", "Cancelado"),
+            "Reprogramado": ("Pendiente de asignación", "Asignado", "Cancelado"),
+            "Entregado": tuple(),
+            "Cancelado": tuple(),
+        }
+
     def validar(self):
         # Verifica que exista información del punto de origen y que sea coherente
         if not (self.origen and isinstance(self.origen, dict)):
@@ -51,31 +64,37 @@ class Pedido(IPedido):
         if len(self.destino.get("direccion", "")) < 5:
             raise ValueError("Dirección no interpretable")
 
-        # Si todo ok, marcar como validado
-        self.estado = "Validado"
+        # Si todo ok, marcar como validado usando la máquina de estados
+        self._cambiar_estado("Validado")
         return True
 
     def asignar(self, repartidor_id):
         # Sólo se asignan pedidos validados
-        if self.estado != "Validado":
-            raise ValueError("El pedido debe estar validado antes de asignarse")
+        if self.estado not in ("Validado", "Pendiente de asignación"):
+            raise ValueError("El pedido debe estar validado o pendiente antes de asignarse")
         self.repartidor_asignado = repartidor_id
-        self.estado = "Asignado"
+        self._cambiar_estado("Asignado")
 
     def marcar_en_ruta(self):
         # Cambia estado a 'En ruta' sólo desde 'Asignado'
-        if self.estado != "Asignado":
-            raise ValueError("Solo un pedido asignado puede pasar a 'En ruta'")
-        self.estado = "En ruta"
+        self._cambiar_estado("En ruta")
 
     def entregar(self):
         # La entrega es el estado terminal del flujo operativo
-        if self.estado != "En ruta":
-            raise ValueError("Solo un pedido 'En ruta' puede entregarse")
-        self.estado = "Entregado"
+        self._cambiar_estado("Entregado")
 
     def cancelar(self):
         # Un pedido entregado no puede cancelarse; cualquier otro estado sí
-        if self.estado == "Entregado":
+        self._cambiar_estado("Cancelado")
+
+    def _cambiar_estado(self, nuevo_estado):
+        # Comprueba que la transición está permitida según la máquina de estados
+        actuales_permitidos = self._transiciones.get(self.estado, tuple())
+        if nuevo_estado == self.estado:
+            return
+        if nuevo_estado not in actuales_permitidos:
+            raise ValueError(f"Transición no permitida: {self.estado} -> {nuevo_estado}")
+        # Restricción adicional: no permitir cancelar un pedido entregado
+        if self.estado == "Entregado" and nuevo_estado == "Cancelado":
             raise ValueError("Un pedido entregado no puede cancelarse")
-        self.estado = "Cancelado"
+        self.estado = nuevo_estado

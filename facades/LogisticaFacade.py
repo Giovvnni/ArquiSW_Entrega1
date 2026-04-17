@@ -5,6 +5,7 @@ y asignación. Depende de abstracciones para facilitar pruebas y cambios.
 """
 
 from interfaces import IPedidoFactory, IRepartidorFactory
+from validators.channel_validators import ChannelValidator
 
 
 class LogisticaFacade:
@@ -16,8 +17,8 @@ class LogisticaFacade:
     def crear_y_asignar_pedido(self, pedido_data, repartidor_data):
         # Crea el pedido usando la fábrica
         pedido = self.pedido_factory.crear_pedido(**pedido_data)
-        # Validar según reglas de negocio antes de asignar
-        pedido.validar()
+        # Validar según reglas de negocio por canal antes de asignar
+        ChannelValidator.validate(pedido.canal_origen, pedido)
         # Crear repartidor y asignar
         repartidor = self.repartidor_factory.crear_repartidor(**repartidor_data)
         repartidor.asignar_pedido(pedido)
