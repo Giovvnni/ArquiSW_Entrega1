@@ -15,7 +15,6 @@ from managers.PedidoManager import PedidoManager
 
 class LogisticaFacade:
     def __init__(self, pedido_factory: IPedidoFactory, repartidor_factory: IRepartidorFactory, route_factory=None):
-        # Las fábricas son inyectadas para seguir DIP (dependencia de abstracciones)
         self.pedido_factory = pedido_factory
         self.repartidor_factory = repartidor_factory
         # Gestor de repartidores en memoria
