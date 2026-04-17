@@ -4,6 +4,7 @@ Usa la fábrica para crear instancias y mantiene un registro en memoria.
 """
 
 from typing import Dict
+from managers.EventBus import EventBus
 
 
 class RepartidorManager:
@@ -21,6 +22,12 @@ class RepartidorManager:
             except Exception:
                 pass
         self._repartidores[id] = repartidor
+        # Informar sobre el registro de repartidor
+        try:
+            print(f"Repartidor {id} registrado (capacidad={capacidad}).")
+            EventBus.publish("repartidor.registrado", {"repartidor_id": id, "capacidad": capacidad})
+        except Exception:
+            pass
         return repartidor
 
     def obtener_repartidor(self, id):
