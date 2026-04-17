@@ -63,6 +63,37 @@ if __name__ == "__main__":
     except Exception:
         pass
 
+    # --- Nuevo pedido express que debe sobrepasar prioridad ---
+    pedido_data2 = {
+        "id": "124",
+        "origen": {"direccion": "Calle 1", "id_punto_origen": "A1"},
+        "destino": {"direccion": "Calle 3", "nombre_destinatario": "Rodrigo", "medio_contacto": "987654321"},
+        "tipo_entrega": "express",
+        "canal_origen": "telefono",
+        "canal_detalle": {"numero": "555-0100"},
+        "tipo_carga": "paquete",
+        "peso_volumen": 2
+    }
+
+    pedido2 = PedidoFactory.crear_pedido(**pedido_data2)
+    try:
+        facade.pedido_manager.registrar(pedido2)
+    except Exception:
+        pass
+    print(f"[CREADO] Pedido {pedido2.id} estado: {pedido2.estado} (canal: {pedido2.canal_origen}, detalle: {pedido2.canal_detalle}, tipo_entrega: {pedido2.tipo_entrega})")
+    ChannelValidator.validate(pedido2.canal_origen, pedido2)
+    print(f"[VALIDADO] Pedido {pedido2.id} estado: {pedido2.estado}")
+    try:
+        facade.repartidor_manager.asignar_pedido_a_repartidor("R1", pedido2)
+    except Exception:
+        facade.registrar_repartidor("R1", 10)
+        facade.repartidor_manager.asignar_pedido_a_repartidor("R1", pedido2)
+    print(f"[ASIGNADO] Pedido {pedido2.id} estado: {pedido2.estado}, repartidor: {pedido2.repartidor_asignado}")
+    try:
+        pedido2.flush_events()
+    except Exception:
+        pass
+
     # Mostrar estado actual de repartidores (depuración)
     print("Repartidores registrados:")
     for r in facade.repartidor_manager._repartidores.values():
@@ -90,29 +121,33 @@ if __name__ == "__main__":
 
     # (En este debug no simulamos entregas adicionales)
 
-    # Definir una ruta basada en origen y destino(s) del pedido 123 y asignarla a R1
+    # Definir una ruta basada en los pedidos asignados a R1.
+    # Priorizar pedidos `express` por delante de `normal`.
     waypoints = []
-    # Usar la ubicación actual del repartidor (Centro de distribución) como punto de inicio si existe
     repartidor_ubic = facade.obtener_ubicacion_repartidor("R1")
     if repartidor_ubic:
         if 'lat' in repartidor_ubic and 'lon' in repartidor_ubic:
             waypoints.append({'lat': repartidor_ubic['lat'], 'lon': repartidor_ubic['lon']})
         else:
-            # aceptar claves 'direccion' o 'address'
             addr = repartidor_ubic.get('direccion') or repartidor_ubic.get('address')
             waypoints.append({'address': addr})
-    else:
-        origen = pedido.origen if pedido.origen else {}
-        if isinstance(origen, dict):
-            if 'lat' in origen and 'lon' in origen:
-                waypoints.append({'lat': origen['lat'], 'lon': origen['lon']})
+    # Obtener pedidos asignados al repartidor y ordenarlos por prioridad (express primero)
+    repartidor = facade.repartidor_manager.obtener_repartidor("R1")
+    assigned_ids = list(repartidor.asignados) if repartidor else []
+    assigned_pedidos = [facade.pedido_manager.obtener(pid) for pid in assigned_ids]
+    # Orden simple: express -> normal -> otros
+    assigned_pedidos_sorted = sorted(assigned_pedidos, key=lambda p: 0 if getattr(p, 'tipo_entrega', None) == 'express' else 1)
+    for p in assigned_pedidos_sorted:
+        if not p:
+            continue
+        dests = p.destino if not isinstance(p.destino, list) else p.destino
+        if isinstance(dests, dict):
+            dests = [dests]
+        for d in dests:
+            if 'lat' in d and 'lon' in d:
+                waypoints.append({'lat': d['lat'], 'lon': d['lon']})
             else:
-                waypoints.append({'address': origen.get('direccion')})
-    for d in destinos_list:
-        if 'lat' in d and 'lon' in d:
-            waypoints.append({'lat': d['lat'], 'lon': d['lon']})
-        else:
-            waypoints.append({'address': d.get('direccion')})
+                waypoints.append({'address': d.get('direccion')})
 
     ruta = facade.definir_ruta("ruta-1", waypoints=waypoints)
     facade.asignar_ruta("ruta-1", "R1")
