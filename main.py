@@ -5,13 +5,14 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from factories.PedidoFactory import PedidoFactory
 from factories.RepartidorFactory import RepartidorFactory
+from factories.RouteFactory import RouteFactory
 from decorators.PedidoDecorator import PedidoPrioritario
 from facades.LogisticaFacade import LogisticaFacade
 
 # Ejemplo de uso: flujo mínimo que crea, valida y asigna un pedido
 if __name__ == "__main__":
     # Crear una fachada para gestionar la logística. La fachada orquesta fábricas y asignaciones.
-    facade = LogisticaFacade(PedidoFactory, RepartidorFactory)
+    facade = LogisticaFacade(PedidoFactory, RepartidorFactory, route_factory=RouteFactory)
 
     # Datos de ejemplo para un pedido y un repartidor
     pedido_data = {
@@ -61,3 +62,18 @@ if __name__ == "__main__":
     print(f"Pedido {pedido2.id} nuevo estado: {pedido2.estado}")
     pedido2.entregar()
     print(f"Pedido {pedido2.id} nuevo estado: {pedido2.estado}")
+
+    # Definir una ruta y asignarla a R1
+    ruta = facade.definir_ruta("ruta-1", waypoints=[{"lat":40.0,"lon":-3.0},{"lat":40.1,"lon":-3.1}])
+    facade.asignar_ruta("ruta-1", "R1")
+    print(f"Ruta {ruta.id} asignada a {ruta.assigned_repartidor}, estado {ruta.estado}")
+
+    # Iniciar la ruta y simular avance
+    facade.iniciar_ruta("ruta-1")
+    print(f"Ruta {ruta.id} estado tras iniciar: {ruta.estado}, siguiente waypoint: {ruta.get_next_waypoint()}")
+    facade.marcar_waypoint("ruta-1")
+    print(f"Ruta {ruta.id} estado: {ruta.estado}, siguiente waypoint: {ruta.get_next_waypoint()}")
+
+    # Ajuste dinámico: añadir un waypoint
+    facade.ajustar_ruta("ruta-1", add_waypoint={"lat":40.2,"lon":-3.2})
+    print(f"Waypoints actuales: {ruta.waypoints}")

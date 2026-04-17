@@ -13,6 +13,10 @@ class Repartidor(IRepartidor):
         self.asignados = []
         # Ubicación actual del repartidor (puede ser None o dict con lat/lon)
         self.ubicacion = None
+        # Ruta actual asignada
+        self.current_route = None
+        # Historial de rutas
+        self.route_history = []
 
     @property
     def disponible(self):
