@@ -99,15 +99,17 @@ if __name__ == "__main__":
     for r in facade.repartidor_manager._repartidores.values():
         print(f" - {r.id}: asignados={r.asignados}, ubicacion={r.ubicacion}")
 
-    # Mostrar detalles del destino(s) del pedido 123
-    destinos = pedido.destino if not isinstance(pedido.destino, list) else pedido.destino
-    if isinstance(destinos, dict):
-        destinos_list = [destinos]
-    else:
-        destinos_list = destinos
-    print(f"Destinos pedido {pedido.id}:")
-    for d in destinos_list:
-        print(f" - {d.get('direccion')} (destinatario: {d.get('nombre_destinatario')}, contacto: {d.get('medio_contacto')})")
+    # Consolidado: mostrar destinos de todos los pedidos actualmente asignados
+    print("Destinos de pedidos asignados:")
+    for p in facade.pedido_manager.listar():
+        if not getattr(p, 'repartidor_asignado', None):
+            continue
+        dests = p.destino if not isinstance(p.destino, list) else p.destino
+        if isinstance(dests, dict):
+            dests = [dests]
+        print(f" Pedido {p.id} (repartidor: {p.repartidor_asignado}):")
+        for d in dests:
+            print(f"  - {d.get('direccion')} (destinatario: {d.get('nombre_destinatario')}, contacto: {d.get('medio_contacto')})")
 
     # (DEBUG) Actualmente sólo usamos el repartidor R1 y un pedido.
 
