@@ -56,6 +56,21 @@ class Pedido(IPedido):
             raise ValueError("Destino incompleto: falta dirección, nombre_destinatario o medio_contacto")
         if self.tipo_entrega not in ("normal", "express", "programada"):
             raise ValueError("Tipo de entrega inválido")
+        # Si es entrega programada, debe incluir una ventana de tiempo válida
+        if self.tipo_entrega == "programada":
+            # Buscamos la ventana en `destino` con la clave 'ventana'
+            ventana = None
+            if isinstance(self.destino, dict):
+                ventana = self.destino.get("ventana")
+            if not ventana or not isinstance(ventana, dict):
+                raise ValueError("Entrega programada: falta ventana de tiempo")
+            inicio = ventana.get("inicio")
+            fin = ventana.get("fin")
+            if not inicio or not fin:
+                raise ValueError("Ventana de tiempo inválida: falta inicio o fin")
+            # Comprobación básica: inicio y fin deben ser distintos (más validaciones pueden añadirse)
+            if inicio == fin:
+                raise ValueError("Ventana de tiempo inválida: inicio y fin coinciden")
         if not self.tipo_carga or not self.peso_volumen:
             raise ValueError("Información logística incompleta")
         if not self.id or not self.canal_origen:

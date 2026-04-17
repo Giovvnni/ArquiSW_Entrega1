@@ -15,11 +15,21 @@ class ChannelValidator:
         cls._registry[canal] = fn
 
     @classmethod
-    def validate(cls, canal: str, pedido):
+    def validate(cls, canal: str, pedido, context: dict = None):
+        """
+        Ejecuta el validador asociado al `canal`.
+
+        `context` es un diccionario opcional que puede contener condiciones
+        operativas o flags que los validadores específicos puedan necesitar.
+        """
         # Busca validador específico por canal, si no existe usa el validador genérico
         fn = cls._registry.get(canal)
         if fn:
-            return fn(pedido)
+            # Permitir que el validador use contexto si lo acepta
+            try:
+                return fn(pedido, context=context)
+            except TypeError:
+                return fn(pedido)
         # Por defecto, reutiliza la validación del propio pedido
         return pedido.validar()
 

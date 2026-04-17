@@ -29,6 +29,10 @@ if __name__ == "__main__":
         "capacidad": 10
     }
 
+    # Registrar un repartidor en el sistema y actualizar su ubicación
+    facade.registrar_repartidor("R1", 10, ubicacion={"lat": 40.0, "lon": -3.0})
+    print("Repartidor R1 registrado y ubicado.")
+
     # Crear y asignar un pedido (la fachada valida y asigna)
     pedido = facade.crear_y_asignar_pedido(pedido_data, repartidor_data)
     print(f"Pedido {pedido.id} estado: {pedido.estado}, repartidor: {pedido.repartidor_asignado}")
@@ -39,8 +43,18 @@ if __name__ == "__main__":
     pedido_data_tel["canal_origen"] = "telefono"
 
     repartidor_data2 = {"id": "R2", "capacidad": 1}
+    # Registrar R2 y asignar
+    facade.registrar_repartidor("R2", 1)
     pedido2 = facade.crear_y_asignar_pedido(pedido_data_tel, repartidor_data2)
     print(f"Pedido {pedido2.id} estado: {pedido2.estado}, repartidor: {pedido2.repartidor_asignado}")
+
+    # Monitorizar ubicación del repartidor R1
+    ubic = facade.obtener_ubicacion_repartidor("R1")
+    print(f"Ubicación R1: {ubic}")
+
+    # Listar repartidores disponibles
+    disponibles = facade.listar_repartidores_disponibles()
+    print(f"Repartidores disponibles: {[r.id for r in disponibles]}")
 
     # Simular transición a 'En ruta' y 'Entregado'
     pedido2.marcar_en_ruta()
