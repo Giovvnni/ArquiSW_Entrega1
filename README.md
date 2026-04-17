@@ -80,17 +80,6 @@ Pruebas manuales y verificación:
 
 - El archivo `main.py` incluye un flujo de ejemplo que crea un `Pedido`, registra un `Repartidor` (`R1`), crea una `Route`, avanza la ruta y muestra logs/notificaciones.
 
-Próximos pasos recomendados (opcional):
 
-- Normalizar claves de dirección (`direccion` vs `address`) en todo el modelo.
-- Persistir eventos en fichero o base de datos para auditoría permanente.
-- Implementar selección automática de repartidor (algoritmo de mejor candidato).
-- Añadir pruebas unitarias para las máquinas de estado y los managers.
-
-Si quieres, puedo:
-
-- añadir ejemplos de uso por cada caso en `README.md` (en inglés/español),
-- normalizar las claves de dirección en el código y actualizar pruebas,
-- o crear una rama y preparar un commit con estos cambios.
 
 
