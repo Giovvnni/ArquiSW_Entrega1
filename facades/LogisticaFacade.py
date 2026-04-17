@@ -8,6 +8,9 @@ from interfaces import IPedidoFactory, IRepartidorFactory
 from validators.channel_validators import ChannelValidator
 from managers.RepartidorManager import RepartidorManager
 from managers.RouteManager import RouteManager
+from managers.EventLogger import EventLogger
+from managers.NotificationManager import NotificationManager
+from managers.PedidoManager import PedidoManager
 
 
 class LogisticaFacade:
@@ -22,10 +25,19 @@ class LogisticaFacade:
         if route_factory is not None:
             # pasar referencia al manager de repartidores para vincular rutas
             self.route_manager = RouteManager(route_factory, repartidor_manager=self.repartidor_manager)
+        # Managers de monitoreo
+        self.event_logger = EventLogger(log_file=None)
+        self.notification_manager = NotificationManager()
+        self.pedido_manager = PedidoManager()
 
     def crear_y_asignar_pedido(self, pedido_data, repartidor_data):
         # Crea el pedido usando la fábrica
         pedido = self.pedido_factory.crear_pedido(**pedido_data)
+        # Registrar pedido en manager para consultas/monitoring
+        try:
+            self.pedido_manager.registrar(pedido)
+        except Exception:
+            pass
         # Validar según reglas de negocio por canal antes de asignar
         ChannelValidator.validate(pedido.canal_origen, pedido)
         # Registrar o reutilizar repartidor desde el manager y asignar
@@ -39,6 +51,15 @@ class LogisticaFacade:
             )
             repartidor.asignar_pedido(pedido)
         return pedido
+
+    def obtener_estado_pedido(self, pedido_id):
+        p = self.pedido_manager.obtener(pedido_id)
+        if not p:
+            return None
+        return p.estado
+
+    def eventos_de_pedido(self, pedido_id):
+        return self.event_logger.query_for("pedido_id", pedido_id)
 
     # Métodos de gestión de repartidores
     def registrar_repartidor(self, id, capacidad, ubicacion=None):

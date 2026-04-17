@@ -1,4 +1,5 @@
 from interfaces import IPedido
+from managers.EventBus import EventBus
 
 
 class Pedido(IPedido):
@@ -112,4 +113,15 @@ class Pedido(IPedido):
         # Restricción adicional: no permitir cancelar un pedido entregado
         if self.estado == "Entregado" and nuevo_estado == "Cancelado":
             raise ValueError("Un pedido entregado no puede cancelarse")
+        anterior = self.estado
         self.estado = nuevo_estado
+        # Publicar evento global de cambio de estado
+        try:
+            EventBus.publish("pedido.estado_cambiado", {
+                "pedido_id": self.id,
+                "anterior_estado": anterior,
+                "nuevo_estado": nuevo_estado,
+                "destinatario": self.destino.get("nombre_destinatario") if isinstance(self.destino, dict) else None,
+            })
+        except Exception:
+            pass

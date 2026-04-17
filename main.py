@@ -77,3 +77,12 @@ if __name__ == "__main__":
     # Ajuste dinámico: añadir un waypoint
     facade.ajustar_ruta("ruta-1", add_waypoint={"lat":40.2,"lon":-3.2})
     print(f"Waypoints actuales: {ruta.waypoints}")
+
+    # MONITORIZACIÓN Y TRACKING: visualizar estados, registrar eventos y notificar
+    estado_123 = facade.obtener_estado_pedido("123")
+    print(f"Estado actual pedido 123: {estado_123}")
+
+    eventos_123 = facade.eventos_de_pedido("123")
+    print(f"Eventos para pedido 123 (últimos {len(eventos_123)}):")
+    for e in eventos_123:
+        print(e)
