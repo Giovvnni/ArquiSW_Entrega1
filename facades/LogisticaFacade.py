@@ -93,9 +93,71 @@ class LogisticaFacade:
     def iniciar_ruta(self, ruta_id):
         if not self.route_manager:
             raise RuntimeError("RouteFactory no configurada en la fachada")
-        return self.route_manager.iniciar_ruta(ruta_id)
+        ruta = self.route_manager.iniciar_ruta(ruta_id)
+        # Marcar pedidos asignados al repartidor como 'En ruta'
+        repartidor_id = ruta.assigned_repartidor
+        if repartidor_id:
+            repartidor = self.repartidor_manager.obtener_repartidor(repartidor_id)
+            if repartidor:
+                for pedido_id in list(repartidor.asignados):
+                    pedido = self.pedido_manager.obtener(pedido_id)
+                    if pedido:
+                        try:
+                            pedido.marcar_en_ruta()
+                            pedido.flush_events()
+                        except Exception:
+                            pass
+        return ruta
 
     def marcar_waypoint(self, ruta_id):
         if not self.route_manager:
             raise RuntimeError("RouteFactory no configurada en la fachada")
-        return self.route_manager.marcar_waypoint(ruta_id)
+        ruta = self.route_manager.marcar_waypoint(ruta_id)
+        # Obtener el waypoint alcanzado
+        reached = getattr(ruta, "last_reached", None)
+        repartidor_id = ruta.assigned_repartidor
+        if reached and repartidor_id:
+            repartidor = self.repartidor_manager.obtener_repartidor(repartidor_id)
+            if repartidor:
+                # Para cada pedido asignado, si su destino coincide con el waypoint alcanzado,
+                # imprimir llegada, marcar entregado y publicar evento
+                for pedido_id in list(repartidor.asignados):
+                    pedido = self.pedido_manager.obtener(pedido_id)
+                    if not pedido:
+                        continue
+                    destino = pedido.destino if isinstance(pedido.destino, dict) else None
+                    match = False
+                    if destino:
+                        # comparar dirección o coordenadas si están disponibles
+                        if 'direccion' in destino and 'address' in reached and destino.get('direccion') == reached.get('address'):
+                            match = True
+                        if 'lat' in destino and 'lon' in destino and 'lat' in reached and 'lon' in reached:
+                            if destino.get('lat') == reached.get('lat') and destino.get('lon') == reached.get('lon'):
+                                match = True
+                    if match:
+                        # Imprimir llegada antes de cambiar estado
+                        try:
+                            addr = reached.get('address') or f"{reached.get('lat')},{reached.get('lon')}"
+                            print(f"Repartidor {repartidor_id} llegó a {addr}")
+                        except Exception:
+                            pass
+                        try:
+                            pedido.entregar()
+                            pedido.flush_events()
+                        except Exception:
+                            pass
+        # Si la ruta se completó y quedan pedidos no marcados, intentar marcarlos como entregados
+        if ruta.estado == "Completada":
+            repartidor_id = ruta.assigned_repartidor
+            if repartidor_id:
+                repartidor = self.repartidor_manager.obtener_repartidor(repartidor_id)
+                if repartidor:
+                    for pedido_id in list(repartidor.asignados):
+                        pedido = self.pedido_manager.obtener(pedido_id)
+                        if pedido and pedido.estado != "Entregado":
+                            try:
+                                pedido.entregar()
+                                pedido.flush_events()
+                            except Exception:
+                                pass
+        return ruta

@@ -32,9 +32,9 @@ if __name__ == "__main__":
         "capacidad": 10
     }
 
-    # Registrar un repartidor en el sistema y actualizar su ubicación
-    facade.registrar_repartidor("R1", 10, ubicacion={"lat": 40.0, "lon": -3.0})
-    print("Repartidor R1 registrado y ubicado.")
+    # Registrar un repartidor en el sistema y actualizar su ubicación (Centro de distribución)
+    facade.registrar_repartidor("R1", 10, ubicacion={"direccion": "Centro de distribución"})
+    print("Repartidor R1 registrado y ubicado en Centro de distribución.")
 
     # Crear pedido (factory) y mostrar estado en cada punto
     pedido = PedidoFactory.crear_pedido(**pedido_data)
@@ -43,7 +43,9 @@ if __name__ == "__main__":
         facade.pedido_manager.registrar(pedido)
     except Exception:
         pass
-    print(f"[CREADO] Pedido {pedido.id} estado: {pedido.estado} (canal: {pedido.canal_origen}, detalle: {pedido.canal_detalle})")
+    origen_info = pedido.origen if isinstance(pedido.origen, dict) else {}
+    punto_origen = f"{origen_info.get('direccion')} (id: {origen_info.get('id_punto_origen')})" if origen_info else "desconocido"
+    print(f"[CREADO] Pedido {pedido.id} estado: {pedido.estado} (canal: {pedido.canal_origen}, detalle: {pedido.canal_detalle}, tipo_entrega: {pedido.tipo_entrega}, punto_origen: {punto_origen})")
 
     # Validar según canal
     ChannelValidator.validate(pedido.canal_origen, pedido)
@@ -76,45 +78,7 @@ if __name__ == "__main__":
     for d in destinos_list:
         print(f" - {d.get('direccion')} (destinatario: {d.get('nombre_destinatario')}, contacto: {d.get('medio_contacto')})")
 
-    # Ejemplo adicional: pedido desde 'telefono' (mismo flujo, validación por canal)
-    pedido_data_tel = pedido_data.copy()
-    pedido_data_tel["id"] = "124"
-    pedido_data_tel["canal_origen"] = "telefono"
-    # Ajustar detalle del canal para teléfono (no usar la IP del request web)
-    pedido_data_tel["canal_detalle"] = {"telefono_origen": "+34123456789"}
-
-    repartidor_data2 = {"id": "R2", "capacidad": 1}
-    # Registrar R2 y crear pedido 124 paso a paso mostrando estados
-    facade.registrar_repartidor("R2", 1)
-    pedido2 = PedidoFactory.crear_pedido(**pedido_data_tel)
-    try:
-        facade.pedido_manager.registrar(pedido2)
-    except Exception:
-        pass
-    print(f"[CREADO] Pedido {pedido2.id} estado: {pedido2.estado} (canal: {pedido2.canal_origen}, detalle: {pedido2.canal_detalle})")
-    ChannelValidator.validate(pedido2.canal_origen, pedido2)
-    print(f"[VALIDADO] Pedido {pedido2.id} estado: {pedido2.estado}")
-    try:
-        facade.repartidor_manager.asignar_pedido_a_repartidor("R2", pedido2)
-    except Exception:
-        # Si R2 no existe por alguna razón, registrarlo y volver a intentar
-        facade.registrar_repartidor("R2", 1)
-        facade.repartidor_manager.asignar_pedido_a_repartidor("R2", pedido2)
-    print(f"[ASIGNADO] Pedido {pedido2.id} estado: {pedido2.estado}, repartidor: {pedido2.repartidor_asignado}")
-    try:
-        pedido2.flush_events()
-    except Exception:
-        pass
-
-    # Mostrar destino(s) del segundo pedido también
-    destinos2 = pedido2.destino if not isinstance(pedido2.destino, list) else pedido2.destino
-    if isinstance(destinos2, dict):
-        destinos2_list = [destinos2]
-    else:
-        destinos2_list = destinos2
-    print(f"Destinos pedido {pedido2.id}:")
-    for d in destinos2_list:
-        print(f" - {d.get('direccion')} (destinatario: {d.get('nombre_destinatario')}, contacto: {d.get('medio_contacto')})")
+    # (DEBUG) Actualmente sólo usamos el repartidor R1 y un pedido.
 
     # Monitorizar ubicación del repartidor R1
     ubic = facade.obtener_ubicacion_repartidor("R1")
@@ -124,28 +88,26 @@ if __name__ == "__main__":
     disponibles = facade.listar_repartidores_disponibles()
     print(f"Repartidores disponibles: {[r.id for r in disponibles]}")
 
-    # Simular transición a 'En ruta' y 'Entregado'
-    pedido2.marcar_en_ruta()
-    print(f"Pedido {pedido2.id} nuevo estado: {pedido2.estado}")
-    try:
-        pedido2.flush_events()
-    except Exception:
-        pass
-    pedido2.entregar()
-    print(f"Pedido {pedido2.id} nuevo estado: {pedido2.estado}")
-    try:
-        pedido2.flush_events()
-    except Exception:
-        pass
+    # (En este debug no simulamos entregas adicionales)
 
     # Definir una ruta basada en origen y destino(s) del pedido 123 y asignarla a R1
     waypoints = []
-    origen = pedido.origen if pedido.origen else {}
-    if isinstance(origen, dict):
-        if 'lat' in origen and 'lon' in origen:
-            waypoints.append({'lat': origen['lat'], 'lon': origen['lon']})
+    # Usar la ubicación actual del repartidor (Centro de distribución) como punto de inicio si existe
+    repartidor_ubic = facade.obtener_ubicacion_repartidor("R1")
+    if repartidor_ubic:
+        if 'lat' in repartidor_ubic and 'lon' in repartidor_ubic:
+            waypoints.append({'lat': repartidor_ubic['lat'], 'lon': repartidor_ubic['lon']})
         else:
-            waypoints.append({'address': origen.get('direccion')})
+            # aceptar claves 'direccion' o 'address'
+            addr = repartidor_ubic.get('direccion') or repartidor_ubic.get('address')
+            waypoints.append({'address': addr})
+    else:
+        origen = pedido.origen if pedido.origen else {}
+        if isinstance(origen, dict):
+            if 'lat' in origen and 'lon' in origen:
+                waypoints.append({'lat': origen['lat'], 'lon': origen['lon']})
+            else:
+                waypoints.append({'address': origen.get('direccion')})
     for d in destinos_list:
         if 'lat' in d and 'lon' in d:
             waypoints.append({'lat': d['lat'], 'lon': d['lon']})
@@ -162,9 +124,12 @@ if __name__ == "__main__":
     facade.marcar_waypoint("ruta-1")
     print(f"Ruta {ruta.id} estado: {ruta.estado}, siguiente waypoint: {ruta.get_next_waypoint()}")
 
-    # Ajuste dinámico: añadir un waypoint
-    facade.ajustar_ruta("ruta-1", add_waypoint={"lat":40.2,"lon":-3.2})
+    # Waypoints actuales (no añadimos waypoints extra en este debug)
     print(f"Waypoints actuales: {ruta.waypoints}")
+    # Simular avance de la ruta hasta completarla
+    while ruta.estado != "Completada":
+        ruta = facade.marcar_waypoint("ruta-1")
+        print(f"Ruta {ruta.id} estado: {ruta.estado}, siguiente waypoint: {ruta.get_next_waypoint()}")
 
     # MONITORIZACIÓN Y TRACKING: visualizar estados, registrar eventos y notificar
     estado_123 = facade.obtener_estado_pedido("123")

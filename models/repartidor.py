@@ -41,11 +41,16 @@ class Repartidor(IRepartidor):
         """Actualiza la ubicación del repartidor.
 
         `ubicacion` debe ser un dict mínimo con claves 'lat' y 'lon', aunque
-        se permiten otros metadatos.
+        o con clave 'direccion'/'address' para ubicaciones textuales.
+        Se permiten otros metadatos.
         """
-        if not isinstance(ubicacion, dict) or 'lat' not in ubicacion or 'lon' not in ubicacion:
-            raise ValueError("Ubicación inválida: se requiere dict con 'lat' y 'lon'")
-        self.ubicacion = ubicacion
+        if not isinstance(ubicacion, dict):
+            raise ValueError("Ubicación inválida: se requiere un dict")
+        # Aceptar coordenadas o dirección textual
+        if ('lat' in ubicacion and 'lon' in ubicacion) or ('direccion' in ubicacion) or ('address' in ubicacion):
+            self.ubicacion = ubicacion
+            return
+        raise ValueError("Ubicación inválida: se requiere 'lat'/'lon' o 'direccion'/'address'")
 
     def obtener_ubicacion(self):
         return self.ubicacion

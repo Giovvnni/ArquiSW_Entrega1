@@ -61,5 +61,5 @@ class RouteManager:
         ruta = self.obtener_ruta(ruta_id)
         if not ruta:
             raise ValueError("Ruta no encontrada")
-        ruta.mark_waypoint_reached()
+        reached = ruta.mark_waypoint_reached()
         return ruta

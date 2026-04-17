@@ -13,6 +13,7 @@ class Route:
         self.estado = "Definida"
         self.assigned_repartidor = None
         self.current_index = 0  # índice del waypoint siguiente a completar
+        self.last_reached = None
 
     def asignar_a(self, repartidor_id):
         self.assigned_repartidor = repartidor_id
@@ -43,9 +44,14 @@ class Route:
         if self.estado != "En progreso":
             raise ValueError("La ruta no está en progreso")
         if self.current_index < len(self.waypoints):
+            # registrar el waypoint alcanzado
+            self.last_reached = self.waypoints[self.current_index]
             self.current_index += 1
+        else:
+            self.last_reached = None
         if self.current_index >= len(self.waypoints):
             self.estado = "Completada"
+        return self.last_reached
 
     def get_next_waypoint(self):
         if self.current_index < len(self.waypoints):

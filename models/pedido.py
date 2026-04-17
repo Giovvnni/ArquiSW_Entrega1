@@ -101,7 +101,29 @@ class Pedido(IPedido):
 
     def entregar(self):
         # La entrega es el estado terminal del flujo operativo
+        if self.estado != "En ruta":
+            raise ValueError("Solo un pedido 'En ruta' puede entregarse")
         self._cambiar_estado("Entregado")
+        # Añadir evento específico de entrega para facilitar búsquedas/filtrado
+        try:
+            punto_origen = None
+            if isinstance(self.origen, dict):
+                punto_origen = {
+                    "direccion": self.origen.get("direccion"),
+                    "id_punto_origen": self.origen.get("id_punto_origen"),
+                }
+            self._pending_events.append({
+                "event": "pedido.entregado",
+                "payload": {
+                    "pedido_id": self.id,
+                    "destinatario": self.destino.get("nombre_destinatario") if isinstance(self.destino, dict) else None,
+                    "canal_detalle": self.canal_detalle,
+                    "tipo_entrega": self.tipo_entrega,
+                    "punto_origen": punto_origen,
+                },
+            })
+        except Exception:
+            pass
 
     def cancelar(self):
         # Un pedido entregado no puede cancelarse; cualquier otro estado sí
