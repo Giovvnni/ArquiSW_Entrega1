@@ -20,16 +20,20 @@ class Pedido(IPedido):
         "Cancelado",
     )
 
-    def __init__(self, id, origen, destino, tipo_entrega, canal_origen, tipo_carga, peso_volumen):
+    def __init__(self, id, origen, destino, tipo_entrega, canal_origen, tipo_carga, peso_volumen, canal_detalle=None):
         self.id = id
         self.origen = origen
         self.destino = destino
         self.tipo_entrega = tipo_entrega
         self.canal_origen = canal_origen
+        # Detalle adicional del canal (ip, user-agent, metadata, etc.)
+        self.canal_detalle = canal_detalle or {}
         self.tipo_carga = tipo_carga
         self.peso_volumen = peso_volumen
         self.estado = "Creado"
         self.repartidor_asignado = None
+        # Eventos pendientes (se acumulan y se publican explícitamente)
+        self._pending_events = []
 
         # Definición explícita de transiciones permitidas (máquina de estados)
         self._transiciones = {
@@ -115,13 +119,28 @@ class Pedido(IPedido):
             raise ValueError("Un pedido entregado no puede cancelarse")
         anterior = self.estado
         self.estado = nuevo_estado
-        # Publicar evento global de cambio de estado
+        # Guardar evento en la cola de pendientes; no publicar automáticamente
         try:
-            EventBus.publish("pedido.estado_cambiado", {
-                "pedido_id": self.id,
-                "anterior_estado": anterior,
-                "nuevo_estado": nuevo_estado,
-                "destinatario": self.destino.get("nombre_destinatario") if isinstance(self.destino, dict) else None,
+            self._pending_events.append({
+                "event": "pedido.estado_cambiado",
+                "payload": {
+                    "pedido_id": self.id,
+                    "anterior_estado": anterior,
+                    "nuevo_estado": nuevo_estado,
+                    "destinatario": self.destino.get("nombre_destinatario") if isinstance(self.destino, dict) else None,
+                    "canal_detalle": self.canal_detalle,
+                },
             })
         except Exception:
+            pass
+
+    def flush_events(self):
+        """Publica los eventos pendientes en el EventBus y los limpia."""
+        try:
+            from managers.EventBus import EventBus
+            for ev in list(self._pending_events):
+                EventBus.publish(ev["event"], ev["payload"], blocking=True)
+            self._pending_events.clear()
+        except Exception:
+            # Si falla la publicación, dejamos la cola intacta para reintentar
             pass

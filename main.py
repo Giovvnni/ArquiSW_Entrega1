@@ -22,6 +22,7 @@ if __name__ == "__main__":
         "destino": {"direccion": "Calle 2", "nombre_destinatario": "Juan", "medio_contacto": "123456789"},
         "tipo_entrega": "normal",
         "canal_origen": "web",
+        "canal_detalle": {"ip": "192.0.2.1", "user_agent": "cli-test/1.0"},
         "tipo_carga": "paquete",
         "peso_volumen": 5
     }
@@ -42,7 +43,7 @@ if __name__ == "__main__":
         facade.pedido_manager.registrar(pedido)
     except Exception:
         pass
-    print(f"[CREADO] Pedido {pedido.id} estado: {pedido.estado}")
+    print(f"[CREADO] Pedido {pedido.id} estado: {pedido.estado} (canal: {pedido.canal_origen}, detalle: {pedido.canal_detalle})")
 
     # Validar según canal
     ChannelValidator.validate(pedido.canal_origen, pedido)
@@ -55,6 +56,10 @@ if __name__ == "__main__":
         facade.registrar_repartidor("R1", 10)
         facade.repartidor_manager.asignar_pedido_a_repartidor("R1", pedido)
     print(f"[ASIGNADO] Pedido {pedido.id} estado: {pedido.estado}, repartidor: {pedido.repartidor_asignado}")
+    try:
+        pedido.flush_events()
+    except Exception:
+        pass
 
     # Mostrar estado actual de repartidores (depuración)
     print("Repartidores registrados:")
@@ -75,6 +80,8 @@ if __name__ == "__main__":
     pedido_data_tel = pedido_data.copy()
     pedido_data_tel["id"] = "124"
     pedido_data_tel["canal_origen"] = "telefono"
+    # Ajustar detalle del canal para teléfono (no usar la IP del request web)
+    pedido_data_tel["canal_detalle"] = {"telefono_origen": "+34123456789"}
 
     repartidor_data2 = {"id": "R2", "capacidad": 1}
     # Registrar R2 y crear pedido 124 paso a paso mostrando estados
@@ -84,7 +91,7 @@ if __name__ == "__main__":
         facade.pedido_manager.registrar(pedido2)
     except Exception:
         pass
-    print(f"[CREADO] Pedido {pedido2.id} estado: {pedido2.estado}")
+    print(f"[CREADO] Pedido {pedido2.id} estado: {pedido2.estado} (canal: {pedido2.canal_origen}, detalle: {pedido2.canal_detalle})")
     ChannelValidator.validate(pedido2.canal_origen, pedido2)
     print(f"[VALIDADO] Pedido {pedido2.id} estado: {pedido2.estado}")
     try:
@@ -94,6 +101,10 @@ if __name__ == "__main__":
         facade.registrar_repartidor("R2", 1)
         facade.repartidor_manager.asignar_pedido_a_repartidor("R2", pedido2)
     print(f"[ASIGNADO] Pedido {pedido2.id} estado: {pedido2.estado}, repartidor: {pedido2.repartidor_asignado}")
+    try:
+        pedido2.flush_events()
+    except Exception:
+        pass
 
     # Mostrar destino(s) del segundo pedido también
     destinos2 = pedido2.destino if not isinstance(pedido2.destino, list) else pedido2.destino
@@ -116,8 +127,16 @@ if __name__ == "__main__":
     # Simular transición a 'En ruta' y 'Entregado'
     pedido2.marcar_en_ruta()
     print(f"Pedido {pedido2.id} nuevo estado: {pedido2.estado}")
+    try:
+        pedido2.flush_events()
+    except Exception:
+        pass
     pedido2.entregar()
     print(f"Pedido {pedido2.id} nuevo estado: {pedido2.estado}")
+    try:
+        pedido2.flush_events()
+    except Exception:
+        pass
 
     # Definir una ruta basada en origen y destino(s) del pedido 123 y asignarla a R1
     waypoints = []

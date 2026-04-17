@@ -31,7 +31,7 @@ class IPedidoFactory(ABC):
 
     @staticmethod
     @abstractmethod
-    def crear_pedido(id, origen, destino, tipo_entrega, canal_origen, tipo_carga, peso_volumen):
+    def crear_pedido(id, origen, destino, tipo_entrega, canal_origen, tipo_carga, peso_volumen, canal_detalle=None):
         pass
 
 
