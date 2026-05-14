@@ -80,6 +80,53 @@ Pruebas manuales y verificación:
 
 - El archivo `main.py` incluye un flujo de ejemplo que crea un `Pedido`, registra un `Repartidor` (`R1`), crea una `Route`, avanza la ruta y muestra logs/notificaciones.
 
+---
 
+## Entregable 2 — Servicio web y frontend
 
+Para esta parte del proyecto se agregó una capa de servicio web sobre el dominio que ya existía, sin tocar nada de lo anterior. La idea era exponer el sistema como una API REST y construir un frontend que la consuma.
 
+### Estructura nueva
+
+El proyecto quedó dividido en dos carpetas principales:
+
+- `backend/` — todo lo de Python: el dominio del E1 más los controllers, services y repositories nuevos
+- `frontend/` — aplicación Next.js que consume la API
+
+Dentro de `backend/src/` está la lógica del servicio web organizada en tres capas:
+
+- `controllers/` reciben los requests HTTP y responden JSON, sin lógica de negocio
+- `services/` orquestan los casos de uso, son los únicos que hablan con la fachada
+- `repositories/` envuelven los managers del E1 para que los services no dependan de cómo está implementado el almacenamiento
+
+### Decisiones de arquitectura
+
+Se eligió arquitectura en capas en vez de microservicios principalmente porque el dominio completo vive en memoria y los managers comparten estado. Separar eso en servicios distintos hubiera obligado a meter una base de datos o un broker de mensajes, lo que estaba fuera del alcance. Con capas se mantiene todo simple y funcional.
+
+El frontend es un cliente separado en Next.js que hace fetch directamente desde el navegador. Se habilitó CORS en el backend para permitir eso. Se descartó usar Server-Side Rendering con llamadas al backend desde el servidor de Next.js porque así no se vería el flujo cliente-servidor en las DevTools del browser, que es justamente lo que se quería demostrar.
+
+En cuanto a serverless, `NotificationManager` y `EventLogger` son los dos componentes que técnicamente podrían correr como funciones en la nube (se activan por evento, hacen algo corto y terminan). Sin embargo, como todo el estado está en memoria, moverlos a serverless no tiene sentido sin antes agregar persistencia externa. Por eso se dejaron como están.
+
+### Cómo correr el proyecto
+
+**Backend** (desde la carpeta `backend/`):
+
+```bash
+cd backend
+pip install -r requirements.txt
+python src/app.py
+```
+
+Queda corriendo en `http://localhost:3000`.
+
+**Frontend** (desde la carpeta `frontend/`):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Queda corriendo en `http://localhost:3001`.
+
+El flujo de prueba básico es: crear un pedido desde la página de Pedidos, validarlo, registrar un repartidor, asignarlo al pedido, definir una ruta y avanzar waypoints. El estado se puede seguir en tiempo real desde la página de Tracking.
