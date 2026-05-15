@@ -48,16 +48,6 @@ export default function Dashboard() {
           </Link>
         ))}
       </div>
-      <div style={{ marginTop: 40, padding: 20, background: "white", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.08)" }}>
-        <h3 style={{ margin: "0 0 8px" }}>Flujo de demo</h3>
-        <ol style={{ margin: 0, paddingLeft: 20, color: "#555", fontSize: 13, lineHeight: 2 }}>
-          <li>Registrar un repartidor en <strong>Repartidores</strong></li>
-          <li>Crear un pedido en <strong>Pedidos</strong> y validarlo</li>
-          <li>Asignar el pedido al repartidor</li>
-          <li>Crear una ruta en <strong>Rutas</strong> con el repartidor_id y avanzar waypoints</li>
-          <li>Ver el estado y notificaciones en <strong>Tracking</strong></li>
-        </ol>
-      </div>
     </div>
   );
 }
