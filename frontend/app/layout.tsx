@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Logística Última Milla",
+  title: "Logística",
   description: "Sistema de gestión logística — Entregable 2",
 };
 
