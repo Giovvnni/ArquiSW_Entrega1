@@ -130,3 +130,74 @@ npm run dev
 Queda corriendo en `http://localhost:3001`.
 
 El flujo de prueba básico es: crear un pedido desde la página de Pedidos, validarlo, registrar un repartidor, asignarlo al pedido, definir una ruta y avanzar waypoints. El estado se puede seguir en tiempo real desde la página de Tracking.
+
+---
+
+## Entregable 3 — Arquitectura Tecnológica e Integración
+
+Este entregable no agrega servicios nuevos. La arquitectura propuesta para producción (SQL/NoSQL, Redis, API Gateway) está documentada en `entregable3_presentacion.txt`. Lo que sigue describe cómo ejecutar los casos de uso y dónde se evidencian las decisiones tecnológicas en el código.
+
+### Tecnologías implementadas
+
+Las dos tecnologías del curso efectivamente implementadas son el **Event Bus en memoria** (tópico pub/sub) y la **API REST**.
+
+El Event Bus es lo más interesante de ver: cuando un pedido cambia de estado, `Pedido.flush_events()` publica el evento en el bus y tanto `NotificationManager` como `EventLogger` lo reciben en paralelo sin que el modelo los conozca directamente. Es el patrón tópico funcionando: un evento, múltiples consumidores, sin acoplamiento entre ellos. El `publish()` soporta `blocking=True` para cuando el orden importa (simula cola) y modo async por defecto para fan-out.
+
+Los archivos relevantes son `managers/EventBus.py` (el bus en sí), `managers/NotificationManager.py` y `managers/EventLogger.py` (los dos suscriptores), y `models/pedido.py` con `flush_events()` en la línea 159.
+
+Para verlo sin levantar el servidor:
+
+```bash
+cd backend
+python main.py
+```
+
+La salida muestra cómo ambos suscriptores reaccionan al mismo `pedido.estado_cambiado` de forma independiente.
+
+La API REST está en `backend/src/controllers/`, dividida en cuatro blueprints (uno por caso de uso), y el frontend la consume desde `frontend/lib/api.ts`.
+
+### Cómo ejecutar los casos de uso
+
+El flujo completo se puede seguir desde el frontend en `http://localhost:3001`, o directamente con curl contra `http://localhost:3000`.
+
+**Gestión de pedidos** — `http://localhost:3001/pedidos`
+
+```bash
+# crear pedido
+curl -X POST http://localhost:3000/api/v1/pedidos \
+  -H "Content-Type: application/json" \
+  -d '{"origen": {"direccion": "Bodega Central", "id_punto_origen": "B1"}, "destino": {"direccion": "Av. Siempre Viva 742", "nombre_destinatario": "Juan", "medio_contacto": "email"}, "tipo_entrega": "normal", "canal_origen": "web", "tipo_carga": "paquete", "peso_volumen": "2kg"}'
+
+# validar y asignar (reemplazar <id> con el id retornado)
+curl -X POST http://localhost:3000/api/v1/pedidos/<id>/validar
+curl -X POST http://localhost:3000/api/v1/pedidos/<id>/asignar \
+  -H "Content-Type: application/json" -d '{"repartidor_id": "R1"}'
+```
+
+**Gestión de repartidores** — `http://localhost:3001/repartidores`
+
+```bash
+curl -X POST http://localhost:3000/api/v1/repartidores \
+  -H "Content-Type: application/json" \
+  -d '{"id": "R1", "capacidad": 10, "ubicacion": "Centro de distribución"}'
+```
+
+**Gestión de rutas** — `http://localhost:3001/rutas`
+
+```bash
+curl -X POST http://localhost:3000/api/v1/rutas \
+  -H "Content-Type: application/json" \
+  -d '{"id": "RUTA-1", "repartidor_id": "R1", "waypoints": [{"address": "Punto A"}, {"address": "Av. Siempre Viva 742"}]}'
+
+curl -X POST http://localhost:3000/api/v1/rutas/RUTA-1/iniciar
+curl -X POST http://localhost:3000/api/v1/rutas/RUTA-1/waypoint
+```
+
+**Monitoreo y tracking** — `http://localhost:3001/tracking`
+
+```bash
+curl http://localhost:3000/api/v1/tracking/<id>
+curl http://localhost:3000/api/v1/tracking/<id>/notificaciones
+```
+
+El endpoint `/notificaciones` retorna lo que `NotificationManager` fue acumulando a medida que llegaban eventos del bus. El controller de tracking no sabe nada de ese proceso, lo que evidencia el desacoplamiento de la integración asíncrona.
