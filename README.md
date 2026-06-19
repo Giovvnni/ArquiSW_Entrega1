@@ -135,7 +135,7 @@ El flujo de prueba básico es: crear un pedido desde la página de Pedidos, vali
 
 ## Entregable 3 — Arquitectura Tecnológica e Integración
 
-Este entregable no agrega servicios nuevos. La arquitectura propuesta para producción (SQL/NoSQL, Redis, API Gateway) está documentada en `entregable3_presentacion.txt`. Lo que sigue describe cómo ejecutar los casos de uso y dónde se evidencian las decisiones tecnológicas en el código.
+Este entregable no agrega servicios nuevos. Lo que sigue describe cómo ejecutar los casos de uso y dónde se evidencian las decisiones tecnológicas en el código.
 
 ### Tecnologías implementadas
 
